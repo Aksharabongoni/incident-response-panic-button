@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Incident Response Panic Center{% endblock %} - NOC Operations</title>
+  
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- Chart.js 4.4 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  
+  <!-- Custom NOC Theme -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <!-- Operations Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-ops sticky-top">
+    <div class="container-fluid px-3 px-lg-4">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('web.index') }}">
+        <span class="fs-4">🚨</span>
+        <div class="d-flex flex-column">
+          <span class="fw-bold tracking-wide text-light" style="letter-spacing: 0.5px;">INCIDENT PANIC CENTER</span>
+          <small class="text-secondary" style="font-size: 0.68rem; margin-top: -3px;">MISSION-CRITICAL SRE NOC</small>
+        </div>
+        <span class="brand-badge ms-1">P1 READY</span>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#opsNavbar" aria-controls="opsNavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="opsNavbar">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3 gap-lg-1">
+          <li class="nav-item">
+            <a class="nav-link {% if request.path == '/' %}active fw-semibold text-white{% endif %}" href="{{ url_for('web.index') }}">
+              <i class="bi bi-speedometer2 me-1"></i> Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.path == '/analytics' %}active fw-semibold text-white{% endif %}" href="{{ url_for('web.analytics') }}">
+              <i class="bi bi-graph-up-arrow me-1"></i> Analytics
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.path == '/notifications' %}active fw-semibold text-white{% endif %}" href="{{ url_for('web.notifications_view') }}">
+              <i class="bi bi-broadcast me-1"></i> Notifications
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.path == '/audit' %}active fw-semibold text-white{% endif %}" href="{{ url_for('web.audit_view') }}">
+              <i class="bi bi-journal-text me-1"></i> Audit Trail
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.path == '/users' %}active fw-semibold text-white{% endif %}" href="{{ url_for('web.users_view') }}">
+              <i class="bi bi-people me-1"></i> Users & RBAC
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.path == '/login' %}active fw-semibold text-white{% endif %}" href="{{ url_for('web.login_view') }}">
+              <i class="bi bi-shield-lock me-1"></i> Auth & Profile
+            </a>
+          </li>
+        </ul>
+
+        <!-- Action tools & Role Management -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <!-- Active Role Switcher -->
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-info dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" id="userRoleDropdown">
+              <i class="bi bi-person-fill me-1"></i>
+              <span id="activeUserNameLabel">Admin</span>
+              <span id="activeRoleBadge" class="badge bg-danger ms-1">Admin</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow">
+              <li class="dropdown-header text-uppercase small text-secondary">Switch Active Role (RBAC)</li>
+              <li>
+                <a class="dropdown-item role-switch-item d-flex align-items-center justify-content-between" href="#" data-role="Admin">
+                  <span><i class="bi bi-shield-lock-fill text-danger me-2"></i>Admin</span>
+                  <span class="badge bg-danger">Full Control</span>
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item role-switch-item d-flex align-items-center justify-content-between" href="#" data-role="Responder">
+                  <span><i class="bi bi-person-gear text-warning me-2"></i>Responder</span>
+                  <span class="badge bg-warning text-dark">Ack & Resolve</span>
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item role-switch-item d-flex align-items-center justify-content-between" href="#" data-role="Reporter">
+                  <span><i class="bi bi-person-badge text-primary me-2"></i>Reporter</span>
+                  <span class="badge bg-primary">Create / Panic</span>
+                </a>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item d-flex align-items-center" href="{{ url_for('web.login_view') }}">
+                  <i class="bi bi-person-badge-fill text-info me-2"></i>Account & API Tokens
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item d-flex align-items-center" href="{{ url_for('web.users_view') }}">
+                  <i class="bi bi-people-fill text-success me-2"></i>User Management
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Audio Toggle -->
+          <button id="toggleSoundBtn" class="btn btn-sm btn-outline-warning" title="Toggle Alarm Sounds">
+            <i class="bi bi-volume-up-fill"></i> Sound ON
+          </button>
+
+          <!-- Auto sync toggle -->
+          <button id="toggleRefreshBtn" class="btn btn-sm btn-outline-success" title="Toggle Auto-Refresh">
+            <i class="bi bi-arrow-repeat spin"></i> Auto-Sync: ON
+          </button>
+
+          <!-- Demo Seeder dropdown -->
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-gear-fill"></i> Data
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+              <li><button class="dropdown-item" id="seedDemoDataBtn"><i class="bi bi-database-fill-add text-info me-2"></i>Seed Sample Incidents</button></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><button class="dropdown-item text-danger" id="resetDataBtn"><i class="bi bi-trash3-fill me-2"></i>Reset All Incidents</button></li>
+            </ul>
+          </div>
+
+          <!-- Quick Panic CTA -->
+          <button class="btn btn-sm btn-danger fw-bold d-flex align-items-center gap-1 shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#panicModal">
+            <i class="bi bi-lightning-fill"></i> PANIC TRIGGER
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
+
+  <!-- Global Panic Modal -->
+  <div class="modal fade" id="panicModal" tabindex="-1" aria-labelledby="panicModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content modal-content-ops border-danger">
+        <div class="modal-header modal-header-ops border-danger">
+          <h5 class="modal-title text-danger fw-bold d-flex align-items-center gap-2" id="panicModalLabel">
+            <i class="bi bi-exclamation-octagon-fill text-danger fs-4"></i>
+            TRIGGER EMERGENCY P1 CRITICAL INCIDENT
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="panicTriggerForm">
+          <div class="modal-body p-4">
+            <div class="alert alert-danger d-flex align-items-start gap-2 mb-3">
+              <i class="bi bi-bell-fill fs-5 mt-1"></i>
+              <div>
+                <strong>Warning:</strong> Activating this panic trigger will immediately declare a <strong>P1 Critical</strong> outage, page the primary on-call engineer, broadcast to Slack/Teams war room, and start incident MTTA escalation timers.
+              </div>
+            </div>
+
+            <!-- Quick Presets -->
+            <div class="mb-3">
+              <label class="form-label text-secondary small fw-semibold text-uppercase">Emergency Scenario Preset</label>
+              <select id="panicPresetSelect" class="form-select form-select-ops">
+                <option value="">-- Choose Quick Scenario or Type Below --</option>
+                <option value="db_outage">🗄️ Database Outage: Primary Master Cluster Failover & Connection Starvation</option>
+                <option value="payment_gateway">💳 Payment Outage: Stripe Gateway 504 Timeouts & Revenue Failure</option>
+                <option value="security_breach">🛡️ Security Alert: Massive Credential Stuffing & Admin Token Breach</option>
+                <option value="api_gateway">🌐 API Gateway Outage: Ingress Crash-Loop & Global HTTP 502s</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="panicTitle" class="form-label fw-semibold text-light">Incident Title <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-ops fw-bold" id="panicTitle" placeholder="e.g. CRITICAL: Global Checkout Gateway Failing All Transactions" required>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label for="panicService" class="form-label fw-semibold text-light">Impacted Service / Component <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-ops" id="panicService" placeholder="e.g. Payment Gateway / Database Cluster" required>
+              </div>
+              <div class="col-md-6">
+                <label for="panicTriggeredBy" class="form-label fw-semibold text-light">Operator Name / Identification</label>
+                <input type="text" class="form-control form-control-ops" id="panicTriggeredBy" placeholder="Auto-populated with current user">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="panicDescription" class="form-label fw-semibold text-light">Initial Triage Notes / Symptoms</label>
+              <textarea class="form-control form-control-ops" id="panicDescription" rows="3" placeholder="Describe current error rates, affected customer segments, and observed alerts..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-ops d-flex justify-content-between">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" id="submitPanicBtn" class="btn btn-danger btn-lg fw-bold px-4 shadow">
+              <i class="bi bi-lightning-fill me-1"></i> CONFIRM PANIC TRIGGER
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acknowledge Modal -->
+  <div class="modal fade" id="ackModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content modal-content-ops border-warning">
+        <div class="modal-header modal-header-ops border-warning">
+          <h5 class="modal-title text-warning fw-bold">
+            <i class="bi bi-hand-index-thumb me-2"></i>Acknowledge Incident <span id="ackIncidentKeyLabel"></span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="ackModalForm">
+          <div class="modal-body p-4">
+            <input type="hidden" id="ackIncidentId">
+            <p class="text-secondary small mb-3">
+              Acknowledging indicates an engineer has taken ownership of this incident. The response timer (MTTA) will stop, and alerts will transition to investigating status.
+            </p>
+            <div class="mb-3">
+              <label class="form-label fw-semibold text-light">Your Name (Actor)</label>
+              <input type="text" class="form-control form-control-ops" id="ackActor" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold text-light">Assign Responder To</label>
+              <input type="text" class="form-control form-control-ops" id="ackAssignee">
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-ops">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-warning text-dark fw-bold">
+              <i class="bi bi-check-lg me-1"></i> Confirm Acknowledgment
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resolve Modal -->
+  <div class="modal fade" id="resolveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content modal-content-ops border-success">
+        <div class="modal-header modal-header-ops border-success">
+          <h5 class="modal-title text-success fw-bold">
+            <i class="bi bi-check2-circle me-2"></i>Resolve Incident <span id="resolveIncidentKeyLabel"></span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="resolveModalForm">
+          <div class="modal-body p-4">
+            <input type="hidden" id="resolveIncidentId">
+            <div class="alert alert-success d-flex align-items-center gap-2 mb-3">
+              <i class="bi bi-shield-check fs-4"></i>
+              <div>Provide the resolution details to finalize Mean Time to Resolve (MTTR) and update the immutable audit log.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold text-light">Resolver (Your Name)</label>
+              <input type="text" class="form-control form-control-ops" id="resolveActor" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold text-light">Root Cause Summary <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-ops" id="resolveRootCause" placeholder="e.g. Memory leak in v2.4.1 ingress container caused OOMKilled cascade" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold text-light">Resolution Steps / Remediation Notes</label>
+              <textarea class="form-control form-control-ops" id="resolveNotes" rows="3" placeholder="e.g. Rolled back deployment to v2.4.0, recycled pods, restored downstream traffic."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-ops">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success fw-bold">
+              <i class="bi bi-check2-all me-1"></i> Finalize Incident Resolution
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page Content -->
+  <main class="py-4">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="mt-5 py-4 border-top text-center text-secondary small" style="border-color: var(--border-color) !important;">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <span class="text-light fw-bold">Incident Response Panic Button API & System</span>
+          <span class="mx-2">•</span>
+          <span>SRE NOC Grade</span>
+        </div>
+        <div class="font-monospace text-muted">
+          Workflow: Panic → P1 Critical → Notification → Open → Acknowledged → Resolved → Audit History
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap 5.3 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  
+  <!-- Custom JS Modules -->
+  <script src="{{ url_for('static', filename='js/sound.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
+

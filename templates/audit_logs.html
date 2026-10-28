@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}System Audit Trail & Compliance - Incident Panic Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-lg-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <h3 class="fw-bold text-light mb-1">
+        <i class="bi bi-shield-shaded text-info me-2"></i>Global System Audit Trail
+      </h3>
+      <p class="text-secondary mb-0">Append-only, immutable security and operations event log across all incidents.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-info" id="refreshAuditBtn">
+        <i class="bi bi-arrow-clockwise"></i> Refresh Log
+      </button>
+      <button class="btn btn-sm btn-outline-secondary" id="exportAuditJsonBtn">
+        <i class="bi bi-download"></i> Export JSON
+      </button>
+    </div>
+  </div>
+
+  <!-- Audit Search & Filters -->
+  <div class="ops-card p-3 mb-4">
+    <div class="row g-3">
+      <div class="col-md-5">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
+          <input type="text" id="auditSearchInput" class="form-control form-control-ops" placeholder="Search message, actor, or incident key...">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <select id="auditActionFilter" class="form-select form-select-ops form-select-sm">
+          <option value="">All Action Types</option>
+          <option value="PANIC_TRIGGERED">PANIC_TRIGGERED</option>
+          <option value="NOTIFICATIONS_DISPATCHED">NOTIFICATIONS_DISPATCHED</option>
+          <option value="ACKNOWLEDGED">ACKNOWLEDGED</option>
+          <option value="RESOLVED">RESOLVED</option>
+          <option value="REOPENED">REOPENED</option>
+          <option value="CLOSED">CLOSED</option>
+          <option value="COMMENT_ADDED">COMMENT_ADDED</option>
+          <option value="ASSIGNMENT_CHANGED">ASSIGNMENT_CHANGED</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <input type="text" id="auditActorFilter" class="form-control form-control-ops form-control-sm" placeholder="Filter by Actor (e.g. Alex, NotificationEngine)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Audit Table -->
+  <div class="ops-card">
+    <div class="table-responsive">
+      <table class="table table-ops align-middle">
+        <thead>
+          <tr>
+            <th style="width: 170px;">Timestamp (UTC)</th>
+            <th style="width: 160px;">Incident</th>
+            <th style="width: 190px;">Action</th>
+            <th style="width: 180px;">Actor / Origin</th>
+            <th style="width: 250px;">State Transition</th>
+            <th>Audit Log Details</th>
+          </tr>
+        </thead>
+        <tbody id="globalAuditTableBody">
+          <tr>
+            <td colspan="6" class="text-center py-5 text-secondary">
+              <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+              Loading immutable audit records...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentAuditLogs = [];
+
+async function loadAuditLogs() {
+  const q = document.getElementById("auditSearchInput")?.value || "";
+  const action = document.getElementById("auditActionFilter")?.value || "";
+  const actor = document.getElementById("auditActorFilter")?.value || "";
+
+  const params = {};
+  if (q) params.q = q;
+  if (action) params.action = action;
+  if (actor) params.actor = actor;
+
+  try {
+    const res = await API.getAuditLogs(params);
+    currentAuditLogs = res.audit_logs || [];
+    renderGlobalAuditTable(currentAuditLogs);
+  } catch (e) {
+    console.error("Failed to load audit logs:", e);
+  }
+}
+
+function renderGlobalAuditTable(logs) {
+  const tbody = document.getElementById("globalAuditTableBody");
+  if (!tbody) return;
+
+  if (logs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-secondary">No audit entries matching search filters.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = logs.map(l => {
+    let actionBadge = `<span class="badge bg-secondary font-monospace">${l.action}</span>`;
+    if (l.action === "PANIC_TRIGGERED") actionBadge = '<span class="badge bg-danger"><i class="bi bi-lightning-fill"></i> PANIC_TRIGGERED</span>';
+    else if (l.action === "ACKNOWLEDGED") actionBadge = '<span class="badge bg-warning text-dark"><i class="bi bi-hand-index-thumb"></i> ACKNOWLEDGED</span>';
+    else if (l.action === "RESOLVED") actionBadge = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> RESOLVED</span>';
+    else if (l.action === "REOPENED") actionBadge = '<span class="badge bg-danger text-light"><i class="bi bi-arrow-counterclockwise"></i> REOPENED</span>';
+    else if (l.action === "NOTIFICATIONS_DISPATCHED") actionBadge = '<span class="badge bg-info text-dark"><i class="bi bi-broadcast"></i> NOTIFICATIONS</span>';
+
+    const incLink = l.incident_id 
+      ? `<a href="/incidents/${l.incident_id}" class="text-info text-decoration-none font-monospace fw-bold">${l.incident_key || `INC-${l.incident_id}`}</a>`
+      : '<span class="text-secondary">System</span>';
+
+    const diff = (l.old_value || l.new_value) 
+      ? `<div class="font-monospace small"><span class="text-secondary">${App.escapeHtml(l.old_value || 'None')}</span> <i class="bi bi-arrow-right text-info"></i> <span class="text-light fw-bold">${App.escapeHtml(l.new_value || 'None')}</span></div>`
+      : '<span class="text-secondary small">-</span>';
+
+    const dateStr = l.timestamp ? new Date(l.timestamp).toLocaleString("en-US", {
+      month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+    }) + " UTC" : "-";
+
+    return `
+      <tr>
+        <td class="font-monospace text-secondary small">${dateStr}</td>
+        <td>${incLink}</td>
+        <td>${actionBadge}</td>
+        <td class="fw-semibold text-light"><i class="bi bi-person-circle text-info me-1"></i> ${App.escapeHtml(l.actor)}</td>
+        <td>${diff}</td>
+        <td class="text-light small">${App.escapeHtml(l.message)}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadAuditLogs();
+
+  const searchInput = document.getElementById("auditSearchInput");
+  if (searchInput) searchInput.addEventListener("input", App.debounce(loadAuditLogs, 300));
+
+  const actionFilter = document.getElementById("auditActionFilter");
+  if (actionFilter) actionFilter.addEventListener("change", loadAuditLogs);
+
+  const actorFilter = document.getElementById("auditActorFilter");
+  if (actorFilter) actorFilter.addEventListener("input", App.debounce(loadAuditLogs, 300));
+
+  const refreshBtn = document.getElementById("refreshAuditBtn");
+  if (refreshBtn) refreshBtn.addEventListener("click", () => {
+    loadAuditLogs();
+    App.showToast("Audit logs refreshed.", "info");
+  });
+
+  const exportBtn = document.getElementById("exportAuditJsonBtn");
+  if (exportBtn) exportBtn.addEventListener("click", () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentAuditLogs, null, 2));
+    const dlAnchor = document.createElement("a");
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `incident_audit_trail_${Date.now()}.json`);
+    dlAnchor.click();
+  });
+});
+</script>
+{% endblock %}
+

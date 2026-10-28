@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Operational Analytics & KPIs - Incident Panic Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-lg-4" id="analyticsApp">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <h3 class="fw-bold text-light mb-1">
+        <i class="bi bi-graph-up text-info me-2"></i>Incident Response Metrics & SLA Performance
+      </h3>
+      <p class="text-secondary mb-0">Mean Time to Acknowledge (MTTA), Mean Time to Resolve (MTTR), and Outage Distribution.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-info" id="refreshMetricsBtn">
+        <i class="bi bi-arrow-clockwise"></i> Refresh Metrics
+      </button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+        <i class="bi bi-printer"></i> Export Report
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+      <div class="kpi-card kpi-critical">
+        <span class="kpi-label">P1 Outages</span>
+        <div class="kpi-value text-danger" id="anP1Count">0</div>
+        <small class="text-secondary">High-urgency panic triggers</small>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="kpi-card kpi-mtta">
+        <span class="kpi-label">Avg MTTA</span>
+        <div class="kpi-value text-info" id="anMtta">0s</div>
+        <small class="text-secondary">Target SLA: &lt; 5 minutes</small>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="kpi-card kpi-mttr">
+        <span class="kpi-label">Avg MTTR</span>
+        <div class="kpi-value text-success" id="anMttr">0s</div>
+        <small class="text-secondary">Target SLA: &lt; 30 minutes</small>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="kpi-card kpi-open">
+        <span class="kpi-label">Total Handled</span>
+        <div class="kpi-value text-warning" id="anTotalCount">0</div>
+        <small class="text-secondary" id="anPanicCount">0 triggered via Panic Button</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="row g-4 mb-4">
+    <!-- Severity Chart -->
+    <div class="col-lg-4 col-md-6">
+      <div class="ops-card h-100 p-4">
+        <h5 class="fw-bold text-light mb-3">
+          <i class="bi bi-pie-chart-fill text-danger me-2"></i>Severity Distribution
+        </h5>
+        <div style="height: 280px; position: relative;">
+          <canvas id="severityChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Breakdown Chart -->
+    <div class="col-lg-4 col-md-6">
+      <div class="ops-card h-100 p-4">
+        <h5 class="fw-bold text-light mb-3">
+          <i class="bi bi-circle-half text-warning me-2"></i>Current Status Breakdown
+        </h5>
+        <div style="height: 280px; position: relative;">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Impacted Services -->
+    <div class="col-lg-4 col-md-12">
+      <div class="ops-card h-100 p-4">
+        <h5 class="fw-bold text-light mb-3">
+          <i class="bi bi-bar-chart-line-fill text-info me-2"></i>Incidents by Service
+        </h5>
+        <div style="height: 280px; position: relative;">
+          <canvas id="serviceChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLA & Response Performance Evaluation -->
+  <div class="ops-card p-4">
+    <h5 class="fw-bold text-light mb-3">
+      <i class="bi bi-award-fill text-warning me-2"></i>SLA Compliance & Response Readiness Benchmark
+    </h5>
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="p-3 rounded bg-dark border border-secondary">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="fw-semibold text-light">Mean Time to Acknowledge (MTTA)</span>
+            <span class="text-info fw-bold" id="slaMttaStatus">Compliant</span>
+          </div>
+          <div class="progress bg-secondary-subtle" style="height: 8px;">
+            <div id="mttaProgressBar" class="progress-bar bg-info" role="progressbar" style="width: 25%"></div>
+          </div>
+          <small class="text-secondary d-block mt-2">
+            Measures latency between panic trigger and first engineer acknowledgment. Gold standard: under 3 minutes.
+          </small>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="p-3 rounded bg-dark border border-secondary">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="fw-semibold text-light">Mean Time to Resolve (MTTR)</span>
+            <span class="text-success fw-bold" id="slaMttrStatus">Compliant</span>
+          </div>
+          <div class="progress bg-secondary-subtle" style="height: 8px;">
+            <div id="mttrProgressBar" class="progress-bar bg-success" role="progressbar" style="width: 40%"></div>
+          </div>
+          <small class="text-secondary d-block mt-2">
+            Measures duration between incident declaration and successful mitigation and service restoration.
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadAnalytics() {
+  try {
+    const res = await API.getMetrics();
+    if (!res || !res.metrics) return;
+    const m = res.metrics;
+
+    document.getElementById("anP1Count").textContent = m.p1_critical_count;
+    document.getElementById("anTotalCount").textContent = m.total_incidents;
+    document.getElementById("anPanicCount").textContent = `${m.panic_triggered_count} triggered via Panic Button`;
+
+    const mttaStr = m.avg_mtta_minutes > 0 ? `${m.avg_mtta_minutes}m` : `${m.avg_mtta_seconds}s`;
+    const mttrStr = m.avg_mttr_minutes > 0 ? `${m.avg_mttr_minutes}m` : `${m.avg_mttr_seconds}s`;
+    document.getElementById("anMtta").textContent = mttaStr;
+    document.getElementById("anMttr").textContent = mttrStr;
+
+    // SLA Bars
+    const mttaProgress = Math.min(100, Math.round((m.avg_mtta_seconds / 300) * 100));
+    document.getElementById("mttaProgressBar").style.width = `${mttaProgress || 20}%`;
+    const mttrProgress = Math.min(100, Math.round((m.avg_mttr_seconds / 1800) * 100));
+    document.getElementById("mttrProgressBar").style.width = `${mttrProgress || 35}%`;
+
+    // Render Charts
+    if (window.OpsCharts) {
+      window.OpsCharts.init(m);
+    }
+  } catch (err) {
+    console.error("Failed to load analytics:", err);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadAnalytics();
+  const btn = document.getElementById("refreshMetricsBtn");
+  if (btn) btn.addEventListener("click", () => {
+    loadAnalytics();
+    App.showToast("Metrics updated.", "info");
+  });
+});
+</script>
+{% endblock %}
+

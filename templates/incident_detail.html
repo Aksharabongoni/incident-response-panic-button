@@ -1,0 +1,626 @@
+{% extends "base.html" %}
+
+{% block title %}Incident War Room - {{ incident_id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-lg-4" id="incidentApp">
+  <!-- Top Navigation & Actions Bar -->
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <a href="{{ url_for('web.index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Dashboard
+      </a>
+      <span class="text-secondary">/</span>
+      <span class="font-monospace fw-bold text-info" id="hdrIncidentKey">INCIDENT</span>
+      <span id="hdrPanicBadge"></span>
+    </div>
+
+    <!-- Live Timer & State Action Buttons -->
+    <div class="d-flex align-items-center gap-2 flex-wrap" id="incidentActionButtons">
+      <div id="liveTimerContainer" class="timer-pill">
+        <i class="bi bi-stopwatch"></i> <span id="liveTimerText">00:00</span>
+      </div>
+      <button id="btnAcknowledge" class="btn btn-warning text-dark fw-bold d-none">
+        <i class="bi bi-hand-index-thumb me-1"></i> Acknowledge Incident
+      </button>
+      <button id="btnResolve" class="btn btn-success fw-bold d-none">
+        <i class="bi bi-check2-circle me-1"></i> Resolve Incident
+      </button>
+      <button id="btnReopen" class="btn btn-outline-warning fw-semibold d-none">
+        <i class="bi bi-arrow-counterclockwise me-1"></i> Reopen
+      </button>
+      <button id="btnClose" class="btn btn-outline-secondary fw-semibold d-none">
+        <i class="bi bi-archive me-1"></i> Close / Archive
+      </button>
+    </div>
+  </div>
+
+  <!-- Incident Title Banner -->
+  <div class="ops-card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+          <span id="badgeSeverity"></span>
+          <span id="badgeStatus"></span>
+          <span class="badge bg-dark border border-secondary text-secondary">
+            <i class="bi bi-hdd-network text-info me-1"></i> <span id="txtService">Loading...</span>
+          </span>
+          <span class="badge bg-dark border border-secondary text-secondary">
+            <i class="bi bi-person-fill text-warning me-1"></i> Assignee: <span id="txtAssignee" class="text-light">Unassigned</span>
+          </span>
+        </div>
+        <h3 class="fw-bold text-light mb-1" id="txtTitle">Loading incident...</h3>
+        <p class="text-secondary mb-0" id="txtDescription"></p>
+      </div>
+
+      <!-- Quick Metadata Grid -->
+      <div class="text-end bg-secondary-subtle p-3 rounded border border-secondary-subtle font-monospace small">
+        <div class="text-secondary">TRIGGERED BY: <span class="text-light fw-bold" id="txtTriggeredBy">-</span></div>
+        <div class="text-secondary">CREATED: <span class="text-light" id="txtCreatedAt">-</span></div>
+        <div class="text-secondary">ACKNOWLEDGED: <span class="text-warning" id="txtAckAt">Pending</span></div>
+        <div class="text-secondary">RESOLVED: <span class="text-success" id="txtResolvedAt">Pending</span></div>
+      </div>
+    </div>
+
+    <!-- Core Workflow Stepper -->
+    <div class="mt-4 pt-3 border-top border-secondary-subtle">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-secondary small fw-bold text-uppercase">
+          <i class="bi bi-diagram-3-fill text-info me-1"></i> Core Incident Lifecycle Workflow
+        </span>
+        <span class="text-secondary small font-monospace">Panic → P1 Critical → Notification → Open → Acknowledged → Resolved → Audit History</span>
+      </div>
+
+      <div class="workflow-stepper">
+        <!-- Step 1: Panic Button Triggered -->
+        <div class="step-item" id="stepPanic">
+          <div class="step-circle"><i class="bi bi-lightning-fill"></i></div>
+          <div class="step-label">Panic Button</div>
+          <small class="text-secondary d-block" id="stepPanicTime">-</small>
+        </div>
+
+        <!-- Step 2: P1 Critical Declared -->
+        <div class="step-item" id="stepP1">
+          <div class="step-circle"><i class="bi bi-exclamation-triangle-fill"></i></div>
+          <div class="step-label">P1 Critical</div>
+          <small class="text-secondary d-block" id="stepP1Time">-</small>
+        </div>
+
+        <!-- Step 3: Notification Dispatched -->
+        <div class="step-item" id="stepNotif">
+          <div class="step-circle"><i class="bi bi-broadcast"></i></div>
+          <div class="step-label">Notification</div>
+          <small class="text-secondary d-block" id="stepNotifCount">Dispatched</small>
+        </div>
+
+        <!-- Step 4: Open -->
+        <div class="step-item" id="stepOpen">
+          <div class="step-circle"><i class="bi bi-bell-fill"></i></div>
+          <div class="step-label">Open</div>
+          <small class="text-secondary d-block" id="stepOpenTime">-</small>
+        </div>
+
+        <!-- Step 5: Acknowledged -->
+        <div class="step-item" id="stepAck">
+          <div class="step-circle"><i class="bi bi-hand-index-thumb-fill"></i></div>
+          <div class="step-label">Acknowledged</div>
+          <small class="text-secondary d-block" id="stepAckTime">Pending</small>
+        </div>
+
+        <!-- Step 6: Resolved -->
+        <div class="step-item" id="stepResolved">
+          <div class="step-circle"><i class="bi bi-check2-circle"></i></div>
+          <div class="step-label">Resolved</div>
+          <small class="text-secondary d-block" id="stepResolvedTime">Pending</small>
+        </div>
+
+        <!-- Step 7: Audit History -->
+        <div class="step-item completed" id="stepAudit">
+          <div class="step-circle"><i class="bi bi-journal-check"></i></div>
+          <div class="step-label">Audit History</div>
+          <small class="text-secondary d-block" id="stepAuditCount">Logged</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resolution Card (visible if resolved) -->
+  <div id="resolutionSummaryCard" class="ops-card p-4 mb-4 border-success d-none">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <i class="bi bi-shield-check text-success fs-4"></i>
+      <h5 class="mb-0 fw-bold text-success">Incident Resolution Details</h5>
+    </div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="text-secondary small fw-bold text-uppercase">Identified Root Cause</label>
+        <div class="bg-dark p-3 rounded border border-secondary text-light fw-medium" id="txtRootCause">-</div>
+      </div>
+      <div class="col-md-6">
+        <label class="text-secondary small fw-bold text-uppercase">Resolution & Remediation Notes</label>
+        <div class="bg-dark p-3 rounded border border-secondary text-light fw-medium" id="txtResolutionNotes">-</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Middle Row: Timeline Updates + Notifications Broadcast -->
+  <div class="row g-4 mb-4">
+    <!-- Left Column: Timeline War Room Updates -->
+    <div class="col-lg-7">
+      <div class="ops-card h-100 d-flex flex-column">
+        <div class="card-header-ops d-flex justify-content-between align-items-center">
+          <span class="fw-bold text-light"><i class="bi bi-chat-left-text-fill text-info me-2"></i>War Room Timeline & Notes</span>
+          <span class="badge bg-secondary" id="commentCountBadge">0 Updates</span>
+        </div>
+        <div class="p-4 flex-grow-1 d-flex flex-column justify-content-between">
+          <!-- Comments List -->
+          <div id="commentsContainer" class="mb-4" style="max-height: 380px; overflow-y: auto;">
+            <p class="text-secondary small">No updates posted yet.</p>
+          </div>
+
+          <!-- Add Note Form -->
+          <form id="addCommentForm" class="border-top border-secondary-subtle pt-3">
+            <div class="row g-2 mb-2">
+              <div class="col-sm-5">
+                <input type="text" class="form-control form-control-ops form-control-sm" id="commentAuthor" placeholder="Your Name / Handle" required>
+              </div>
+              <div class="col-sm-7">
+                <div class="input-group input-group-sm">
+                  <input type="text" class="form-control form-control-ops" id="commentInput" placeholder="Add investigation status or action taken..." required>
+                  <button class="btn btn-info text-dark fw-bold" type="submit">
+                    <i class="bi bi-send-fill"></i> Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Dispatched Notifications Broadcast Log -->
+    <div class="col-lg-5">
+      <div class="ops-card h-100">
+        <div class="card-header-ops d-flex justify-content-between align-items-center">
+          <span class="fw-bold text-light"><i class="bi bi-broadcast-pin text-danger me-2"></i>Dispatched Alert Channels</span>
+          <span class="badge bg-danger-subtle text-danger" id="notifCountBadge">0 Dispatches</span>
+        </div>
+        <div class="p-3" style="max-height: 440px; overflow-y: auto;">
+          <div id="notificationsContainer" class="d-flex flex-column gap-2">
+            <p class="text-secondary small">Loading dispatched notifications...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Section: Complete Immutable Audit History -->
+  <div class="ops-card mb-4" id="auditHistorySection">
+    <div class="card-header-ops d-flex justify-content-between align-items-center py-3">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-journal-code text-info fs-5"></i>
+        <div>
+          <h5 class="mb-0 fw-bold text-light">Complete Incident Audit History (Immutable Trail)</h5>
+          <small class="text-secondary">Chronological record of state transitions, actors, alerts, and system triggers.</small>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-outline-info" onclick="IncidentDetail.refreshAuditLogs()">
+        <i class="bi bi-arrow-clockwise"></i> Refresh Audit
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-ops align-middle">
+        <thead>
+          <tr>
+            <th style="width: 190px;">Timestamp (UTC)</th>
+            <th style="width: 170px;">Action</th>
+            <th style="width: 180px;">Actor / System</th>
+            <th style="width: 240px;">Value Transition</th>
+            <th>Detailed Message</th>
+          </tr>
+        </thead>
+        <tbody id="auditTableBody">
+          <tr>
+            <td colspan="5" class="text-center py-4 text-secondary">
+              <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+              Loading audit logs...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const INCIDENT_ID = {{ incident_id }};
+
+const IncidentDetail = {
+  incident: null,
+  timerInterval: null,
+
+  async init() {
+    await this.loadIncident();
+    this.bindEvents();
+    setInterval(() => this.loadIncident(true), 5000);
+  },
+
+  bindEvents() {
+    // Acknowledge Button
+    const btnAck = document.getElementById("btnAcknowledge");
+    if (btnAck) {
+      btnAck.addEventListener("click", () => {
+        App.openAckModal(this.incident.id, this.incident.key);
+      });
+    }
+
+    // Resolve Button
+    const btnResolve = document.getElementById("btnResolve");
+    if (btnResolve) {
+      btnResolve.addEventListener("click", () => {
+        App.openResolveModal(this.incident.id, this.incident.key);
+      });
+    }
+
+    // Reopen Button
+    const btnReopen = document.getElementById("btnReopen");
+    if (btnReopen) {
+      btnReopen.addEventListener("click", async () => {
+        const reason = prompt("Enter reason for reopening incident:", "Regression observed in production metrics");
+        if (reason) {
+          try {
+            const res = await API.reopenIncident(this.incident.id, null, reason);
+            App.showToast(res.message, "warning");
+            this.loadIncident();
+          } catch (e) {
+            App.showToast("Failed to reopen: " + (e.error || e.message), "danger");
+          }
+        }
+      });
+    }
+
+    // Close Button
+    const btnClose = document.getElementById("btnClose");
+    if (btnClose) {
+      btnClose.addEventListener("click", async () => {
+        if (confirm("Formally close this incident? This archives post-mortem records.")) {
+          try {
+            const res = await API.closeIncident(this.incident.id);
+            App.showToast(res.message, "info");
+            this.loadIncident();
+          } catch (e) {
+            App.showToast("Failed to close: " + (e.error || e.message), "danger");
+          }
+        }
+      });
+    }
+
+    // Comment form
+    const commentForm = document.getElementById("addCommentForm");
+    if (commentForm) {
+      commentForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const author = document.getElementById("commentAuthor").value.trim() || 
+          (App.currentUser ? `${App.currentUser.username} (${App.currentUser.role})` : "Operator");
+        const comment = document.getElementById("commentInput").value.trim();
+        if (!comment) return;
+
+        try {
+          await API.addComment(INCIDENT_ID, author, comment);
+          document.getElementById("commentInput").value = "";
+          App.showToast("Timeline update added.", "success");
+          this.loadIncident();
+        } catch (err) {
+          App.showToast("Failed to post update: " + (err.error || err.message), "danger");
+        }
+      });
+    }
+  },
+
+  async loadIncident(isBackground = false) {
+    try {
+      const data = await API.getIncident(INCIDENT_ID);
+      if (data && data.incident) {
+        this.incident = data.incident;
+        this.renderIncidentUI();
+      }
+    } catch (err) {
+      if (!isBackground) {
+        console.error("Failed to load incident:", err);
+      }
+    }
+  },
+
+  renderIncidentUI() {
+    const inc = this.incident;
+    if (!inc) return;
+
+    if (App.currentUser) {
+      const authorInput = document.getElementById("commentAuthor");
+      if (authorInput && !authorInput.value) {
+        authorInput.value = `${App.currentUser.username} (${App.currentUser.role})`;
+      }
+    }
+
+    // Header
+    document.getElementById("hdrIncidentKey").textContent = inc.key;
+    document.getElementById("hdrPanicBadge").innerHTML = inc.is_panic 
+      ? '<span class="badge bg-danger ms-2"><i class="bi bi-lightning-fill"></i> PANIC TRIGGERED</span>' 
+      : '';
+    document.getElementById("txtTitle").textContent = inc.title;
+    document.getElementById("txtDescription").textContent = inc.description || "No description provided.";
+    document.getElementById("txtService").textContent = inc.service_name;
+    document.getElementById("txtAssignee").textContent = inc.assigned_to || "Unassigned";
+    document.getElementById("txtTriggeredBy").textContent = inc.triggered_by;
+    document.getElementById("txtCreatedAt").textContent = this.formatDateTime(inc.created_at);
+    document.getElementById("txtAckAt").textContent = inc.acknowledged_at ? this.formatDateTime(inc.acknowledged_at) : "Pending";
+    document.getElementById("txtResolvedAt").textContent = inc.resolved_at ? this.formatDateTime(inc.resolved_at) : "Pending";
+
+    // Badges
+    document.getElementById("badgeSeverity").innerHTML = App.getSeverityBadge(inc.severity);
+    document.getElementById("badgeStatus").innerHTML = App.getStatusBadge(inc.status);
+
+    // Permissions check
+    const canManage = App.currentUser && (App.currentUser.role === "Admin" || App.currentUser.role === "Responder");
+
+    const btnAck = document.getElementById("btnAcknowledge");
+    const btnResolve = document.getElementById("btnResolve");
+    const btnReopen = document.getElementById("btnReopen");
+    const btnClose = document.getElementById("btnClose");
+
+    btnAck.classList.add("d-none");
+    btnResolve.classList.add("d-none");
+    btnReopen.classList.add("d-none");
+    btnClose.classList.add("d-none");
+
+    if (canManage) {
+      if (inc.status === "OPEN") {
+        btnAck.classList.remove("d-none");
+        btnResolve.classList.remove("d-none");
+      } else if (inc.status === "ACKNOWLEDGED") {
+        btnResolve.classList.remove("d-none");
+      } else if (inc.status === "RESOLVED") {
+        btnReopen.classList.remove("d-none");
+        btnClose.classList.remove("d-none");
+      }
+    }
+
+    // Resolution card
+    const resCard = document.getElementById("resolutionSummaryCard");
+    if (inc.status === "RESOLVED" || inc.status === "CLOSED") {
+      resCard.classList.remove("d-none");
+      document.getElementById("txtRootCause").textContent = inc.root_cause || "Not specified";
+      document.getElementById("txtResolutionNotes").textContent = inc.resolution_notes || "Not specified";
+    } else {
+      resCard.classList.add("d-none");
+    }
+
+    this.updateWorkflowStepper(inc);
+    this.updateTimer(inc);
+    this.renderComments(inc.comments || []);
+    this.renderNotifications(inc.notifications || []);
+    this.renderAuditLogs(inc.audit_logs || []);
+  },
+
+  updateWorkflowStepper(inc) {
+    const sPanic = document.getElementById("stepPanic");
+    const sP1 = document.getElementById("stepP1");
+    const sNotif = document.getElementById("stepNotif");
+    const sOpen = document.getElementById("stepOpen");
+    const sAck = document.getElementById("stepAck");
+    const sResolved = document.getElementById("stepResolved");
+    const sAudit = document.getElementById("stepAudit");
+
+    [sPanic, sP1, sNotif, sOpen, sAck, sResolved, sAudit].forEach(el => {
+      el.classList.remove("completed", "active");
+    });
+
+    // Step 1: Panic
+    if (inc.is_panic) {
+      sPanic.classList.add("completed");
+      document.getElementById("stepPanicTime").textContent = "Activated";
+    } else {
+      document.getElementById("stepPanicTime").textContent = "Manual";
+    }
+
+    // Step 2: P1
+    if (inc.severity === "P1_CRITICAL") {
+      sP1.classList.add("completed");
+      document.getElementById("stepP1Time").textContent = "P1 Critical";
+    } else {
+      document.getElementById("stepP1Time").textContent = inc.severity;
+    }
+
+    // Step 3: Notification
+    sNotif.classList.add("completed");
+    document.getElementById("stepNotifCount").textContent = `${inc.notification_count || 0} Alerts Sent`;
+
+    // Step 4: Open
+    if (inc.status === "OPEN") {
+      sOpen.classList.add("active");
+      document.getElementById("stepOpenTime").textContent = "Active Now";
+    } else {
+      sOpen.classList.add("completed");
+      document.getElementById("stepOpenTime").textContent = "Triage Done";
+    }
+
+    // Step 5: Acknowledged
+    if (inc.status === "ACKNOWLEDGED") {
+      sAck.classList.add("active");
+      document.getElementById("stepAckTime").textContent = inc.acknowledged_at ? this.formatTimeOnly(inc.acknowledged_at) : "In Progress";
+    } else if (inc.status === "RESOLVED" || inc.status === "CLOSED" || inc.acknowledged_at) {
+      sAck.classList.add("completed");
+      document.getElementById("stepAckTime").textContent = inc.acknowledged_at ? this.formatTimeOnly(inc.acknowledged_at) : "Acknowledged";
+    } else {
+      document.getElementById("stepAckTime").textContent = "Pending";
+    }
+
+    // Step 6: Resolved
+    if (inc.status === "RESOLVED") {
+      sResolved.classList.add("active");
+      document.getElementById("stepResolvedTime").textContent = inc.resolved_at ? this.formatTimeOnly(inc.resolved_at) : "Resolved";
+    } else if (inc.status === "CLOSED") {
+      sResolved.classList.add("completed");
+      document.getElementById("stepResolvedTime").textContent = inc.resolved_at ? this.formatTimeOnly(inc.resolved_at) : "Resolved";
+    } else {
+      document.getElementById("stepResolvedTime").textContent = "Pending";
+    }
+
+    // Step 7: Audit History
+    sAudit.classList.add("completed");
+    document.getElementById("stepAuditCount").textContent = `${inc.audit_count || 0} Records`;
+  },
+
+  updateTimer(inc) {
+    if (this.timerInterval) clearInterval(this.timerInterval);
+
+    const updateDisplay = () => {
+      const timerEl = document.getElementById("liveTimerText");
+      if (!timerEl) return;
+
+      if (inc.status === "RESOLVED" || inc.status === "CLOSED") {
+        timerEl.textContent = `MTTR: ${App.formatDuration(inc.mttr_seconds)}`;
+        document.getElementById("liveTimerContainer").className = "timer-pill border-success text-success bg-success-subtle";
+      } else if (inc.status === "ACKNOWLEDGED") {
+        timerEl.textContent = `TTA: ${App.formatDuration(inc.mtta_seconds)} (Triage)`;
+        document.getElementById("liveTimerContainer").className = "timer-pill border-warning text-warning bg-warning-subtle";
+      } else {
+        const created = new Date(inc.created_at).getTime();
+        const now = new Date().getTime();
+        const diffSec = Math.max(0, Math.floor((now - created) / 1000));
+        timerEl.textContent = `MTTA: ${App.formatDuration(diffSec)}`;
+        document.getElementById("liveTimerContainer").className = "timer-pill border-danger text-danger bg-danger-subtle";
+      }
+    };
+
+    updateDisplay();
+    if (inc.status === "OPEN") {
+      this.timerInterval = setInterval(updateDisplay, 1000);
+    }
+  },
+
+  renderComments(comments) {
+    const container = document.getElementById("commentsContainer");
+    const countBadge = document.getElementById("commentCountBadge");
+    if (!container) return;
+
+    if (countBadge) countBadge.textContent = `${comments.length} Updates`;
+
+    if (comments.length === 0) {
+      container.innerHTML = '<p class="text-secondary small py-3 text-center">No timeline updates recorded yet. Post initial status above.</p>';
+      return;
+    }
+
+    container.innerHTML = comments.map(c => `
+      <div class="p-3 mb-2 rounded bg-dark border border-secondary">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="fw-bold text-info"><i class="bi bi-person-fill"></i> ${App.escapeHtml(c.author)}</span>
+          <small class="text-secondary">${this.formatDateTime(c.created_at)}</small>
+        </div>
+        <div class="text-light small">${App.escapeHtml(c.comment)}</div>
+      </div>
+    `).join("");
+
+    container.scrollTop = container.scrollHeight;
+  },
+
+  renderNotifications(notifs) {
+    const container = document.getElementById("notificationsContainer");
+    const countBadge = document.getElementById("notifCountBadge");
+    if (!container) return;
+
+    if (countBadge) countBadge.textContent = `${notifs.length} Dispatches`;
+
+    if (notifs.length === 0) {
+      container.innerHTML = '<p class="text-secondary small">No notifications dispatched.</p>';
+      return;
+    }
+
+    const channelIcons = {
+      PAGER_SMS: '<i class="bi bi-chat-dots-fill text-warning"></i>',
+      SLACK: '<i class="bi bi-slack text-info"></i>',
+      EMAIL: '<i class="bi bi-envelope-fill text-danger"></i>',
+      NOC_BROADCAST: '<i class="bi bi-megaphone-fill text-danger"></i>',
+      WEBHOOK: '<i class="bi bi-cloud-arrow-up-fill text-primary"></i>'
+    };
+
+    container.innerHTML = notifs.map(n => `
+      <div class="p-2 rounded bg-dark border border-secondary small">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="fw-bold text-light">${channelIcons[n.channel] || ''} ${n.channel}</span>
+          <span class="badge bg-success-subtle text-success border border-success-subtle">${n.status}</span>
+        </div>
+        <div class="text-secondary text-truncate mb-1"><i class="bi bi-send"></i> ${App.escapeHtml(n.recipient)}</div>
+        <div class="text-light-50 font-monospace small bg-black p-2 rounded">${App.escapeHtml(n.message)}</div>
+        <div class="text-end text-muted mt-1" style="font-size: 0.72rem;">${this.formatDateTime(n.sent_at)}</div>
+      </div>
+    `).join("");
+  },
+
+  renderAuditLogs(logs) {
+    const tbody = document.getElementById("auditTableBody");
+    if (!tbody) return;
+
+    if (logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-secondary">No audit entries found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = logs.map(l => {
+      let actionBadge = `<span class="badge bg-secondary font-monospace">${l.action}</span>`;
+      if (l.action === "PANIC_TRIGGERED") actionBadge = '<span class="badge bg-danger"><i class="bi bi-lightning-fill"></i> PANIC_TRIGGERED</span>';
+      else if (l.action === "ACKNOWLEDGED") actionBadge = '<span class="badge bg-warning text-dark"><i class="bi bi-hand-index-thumb"></i> ACKNOWLEDGED</span>';
+      else if (l.action === "RESOLVED") actionBadge = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> RESOLVED</span>';
+      else if (l.action === "REOPENED") actionBadge = '<span class="badge bg-danger text-light"><i class="bi bi-arrow-counterclockwise"></i> REOPENED</span>';
+      else if (l.action === "NOTIFICATIONS_DISPATCHED") actionBadge = '<span class="badge bg-info text-dark"><i class="bi bi-broadcast"></i> NOTIFICATIONS</span>';
+
+      const diff = (l.old_value || l.new_value) 
+        ? `<div class="font-monospace small"><span class="text-secondary">${App.escapeHtml(l.old_value || 'None')}</span> <i class="bi bi-arrow-right text-info"></i> <span class="text-light fw-bold">${App.escapeHtml(l.new_value || 'None')}</span></div>`
+        : '<span class="text-secondary small">-</span>';
+
+      return `
+        <tr>
+          <td class="font-monospace text-secondary small">${this.formatDateTime(l.timestamp)}</td>
+          <td>${actionBadge}</td>
+          <td class="fw-semibold text-light"><i class="bi bi-person-circle text-info me-1"></i> ${App.escapeHtml(l.actor)}</td>
+          <td>${diff}</td>
+          <td class="text-light small">${App.escapeHtml(l.message)}</td>
+        </tr>
+      `;
+    }).join("");
+  },
+
+  async refreshAuditLogs() {
+    try {
+      const data = await API.getIncidentAudit(INCIDENT_ID);
+      this.renderAuditLogs(data.audit_logs || []);
+      App.showToast("Audit trail refreshed.", "info");
+    } catch (e) {
+      App.showToast("Failed to refresh audit: " + (e.error || e.message), "danger");
+    }
+  },
+
+  formatDateTime(isoStr) {
+    if (!isoStr) return "-";
+    const d = new Date(isoStr);
+    return d.toLocaleString("en-US", {
+      month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+    }) + " UTC";
+  },
+
+  formatTimeOnly(isoStr) {
+    if (!isoStr) return "-";
+    const d = new Date(isoStr);
+    return d.toLocaleTimeString("en-US", { hour12: false });
+  }
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  IncidentDetail.init();
+});
+</script>
+{% endblock %}
+

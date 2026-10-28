@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}NOC Dashboard - Incident Panic Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-lg-4">
+
+  <!-- Active Emergency Flash Banner -->
+  <div id="emergencyAlertBanner" class="emergency-alert-banner d-none text-white p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-3">
+      <span class="fs-2 animate-bounce">🚨</span>
+      <div>
+        <h5 class="mb-0 fw-bold" id="activeP1CountText">ACTIVE P1 CRITICAL INCIDENT(S) REQUIRE IMMEDIATE ATTENTION!</h5>
+        <small class="text-white-50">On-call responders have been paged. War room channels are active.</small>
+      </div>
+    </div>
+    <a href="#incidentsTableSection" class="btn btn-light btn-sm fw-bold text-danger px-3">
+      View Active Outages <i class="bi bi-arrow-down-short"></i>
+    </a>
+  </div>
+
+  <!-- Hero Row: Panic Button + KPI Metrics -->
+  <div class="row g-4 mb-4">
+    <!-- Panic Button Hero -->
+    <div class="col-xl-4 col-lg-5">
+      <div class="ops-card h-100 p-4 d-flex flex-column justify-content-between position-relative overflow-hidden">
+        <div class="panic-btn-hazard-stripe"></div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-secondary small fw-bold text-uppercase tracking-wider">
+            <i class="bi bi-shield-fill-exclamation text-danger me-1"></i> Emergency Action
+          </span>
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle">PRIORITY 1</span>
+        </div>
+
+        <div class="panic-button-container my-3">
+          <button id="mainPanicButton" class="panic-btn-main" data-bs-toggle="modal" data-bs-target="#panicModal" title="Activate Emergency Incident Response">
+            <i class="bi bi-lightning-charge-fill display-5 mb-1"></i>
+            <span>PANIC</span>
+            <small style="font-size: 0.65rem; opacity: 0.85; letter-spacing: 1px;">TRIGGER P1</small>
+          </button>
+          <div class="mt-3 text-secondary small">
+            Press to immediately declare a <span class="text-danger fw-bold">P1 Critical Outage</span> and dispatch multi-channel on-call alerts.
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-center gap-2 pt-2 border-top border-secondary-subtle">
+          <button class="btn btn-sm btn-outline-danger w-100 fw-semibold" data-bs-toggle="modal" data-bs-target="#panicModal">
+            <i class="bi bi-broadcast me-1"></i> Open Emergency Dispatch
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Operations Metrics & On-Call Roster -->
+    <div class="col-xl-8 col-lg-7">
+      <div class="row g-3 h-100">
+        <!-- KPI 1: Active P1s -->
+        <div class="col-sm-6 col-md-3">
+          <div class="kpi-card kpi-critical h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="kpi-label">Active P1</span>
+              <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+            </div>
+            <div class="kpi-value text-danger" id="kpiP1CriticalCount">0</div>
+            <small class="text-secondary">P1 Critical incidents</small>
+          </div>
+        </div>
+
+        <!-- KPI 2: Total Open -->
+        <div class="col-sm-6 col-md-3">
+          <div class="kpi-card kpi-open h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="kpi-label">Total Open</span>
+              <i class="bi bi-bell-fill text-warning fs-5"></i>
+            </div>
+            <div class="kpi-value text-warning" id="kpiOpenCount">0</div>
+            <small class="text-secondary">Awaiting ack or triage</small>
+          </div>
+        </div>
+
+        <!-- KPI 3: MTTA -->
+        <div class="col-sm-6 col-md-3">
+          <div class="kpi-card kpi-mtta h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="kpi-label">Mean TTA</span>
+              <i class="bi bi-stopwatch-fill text-info fs-5"></i>
+            </div>
+            <div class="kpi-value text-info" id="kpiMtta">0s</div>
+            <small class="text-secondary">Time to acknowledge</small>
+          </div>
+        </div>
+
+        <!-- KPI 4: MTTR -->
+        <div class="col-sm-6 col-md-3">
+          <div class="kpi-card kpi-mttr h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="kpi-label">Mean TTR</span>
+              <i class="bi bi-check-circle-fill text-success fs-5"></i>
+            </div>
+            <div class="kpi-value text-success" id="kpiMttr">0s</div>
+            <small class="text-secondary">Time to resolve</small>
+          </div>
+        </div>
+
+        <!-- On-Call Schedule & Channels Status Bar -->
+        <div class="col-12">
+          <div class="ops-card p-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary-subtle text-primary p-2 rounded">
+                  <i class="bi bi-person-badge-fill fs-4"></i>
+                </div>
+                <div>
+                  <div class="fw-bold text-light">Primary On-Call Commander: <span class="text-info">Sarah Connor</span></div>
+                  <small class="text-secondary">Pager: +1-555-0199 • Roster: 24/7 Escalation Level 1 • SRE NOC</small>
+                </div>
+              </div>
+              <div class="d-flex gap-2">
+                <span class="badge bg-dark border border-secondary text-light d-flex align-items-center gap-1">
+                  <i class="bi bi-slack text-info"></i> Slack: Connected
+                </span>
+                <span class="badge bg-dark border border-secondary text-light d-flex align-items-center gap-1">
+                  <i class="bi bi-chat-dots-fill text-warning"></i> SMS/Pager: Active
+                </span>
+                <span class="badge bg-dark border border-secondary text-light d-flex align-items-center gap-1">
+                  <i class="bi bi-envelope-fill text-danger"></i> Email: Ready
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incident Operations Table Section -->
+  <div class="ops-card" id="incidentsTableSection">
+    <!-- Header with Filters -->
+    <div class="card-header-ops d-flex justify-content-between align-items-center flex-wrap gap-3 py-3">
+      <div class="d-flex align-items-center gap-2">
+        <h5 class="mb-0 fw-bold text-light">
+          <i class="bi bi-activity text-danger me-2"></i>Live Incident Feed
+        </h5>
+        <span class="badge bg-secondary-subtle text-secondary" id="incidentTableCountBadge">Active Feed</span>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <!-- Search filter -->
+        <div class="input-group input-group-sm" style="width: 220px;">
+          <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
+          <input type="text" id="incidentSearchInput" class="form-control form-control-ops form-control-sm" placeholder="Search key, service...">
+        </div>
+
+        <!-- Status filter -->
+        <select id="statusFilterSelect" class="form-select form-select-ops form-select-sm" style="width: 140px;">
+          <option value="">All Statuses</option>
+          <option value="OPEN">Open</option>
+          <option value="ACKNOWLEDGED">Acknowledged</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="CLOSED">Closed</option>
+        </select>
+
+        <!-- Severity filter -->
+        <select id="severityFilterSelect" class="form-select form-select-ops form-select-sm" style="width: 140px;">
+          <option value="">All Severities</option>
+          <option value="P1_CRITICAL">P1 Critical</option>
+          <option value="P2_HIGH">P2 High</option>
+          <option value="P3_MEDIUM">P3 Medium</option>
+          <option value="P4_LOW">P4 Low</option>
+        </select>
+
+        <!-- Manual Incident CTA -->
+        <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#manualIncidentModal">
+          <i class="bi bi-plus-circle me-1"></i> Log Incident
+        </button>
+      </div>
+    </div>
+
+    <!-- Table Body -->
+    <div class="table-responsive">
+      <table class="table table-ops align-middle">
+        <thead>
+          <tr>
+            <th style="width: 170px;">Key</th>
+            <th>Title & Affected Service</th>
+            <th style="width: 130px;">Severity</th>
+            <th style="width: 150px;">Status</th>
+            <th style="width: 160px;">Responder</th>
+            <th style="width: 130px;">Response Time</th>
+            <th style="width: 180px;" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="incidentsTableBody">
+          <tr>
+            <td colspan="7" class="text-center py-5 text-secondary">
+              <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+              Streaming real-time incident status...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Manual Log Incident Modal -->
+<div class="modal fade" id="manualIncidentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content modal-content-ops">
+      <div class="modal-header modal-header-ops">
+        <h5 class="modal-title fw-bold text-light">
+          <i class="bi bi-file-earmark-plus text-info me-2"></i>Log Incident Manually
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="manualIncidentForm">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-light">Incident Title <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-ops" id="manualTitle" placeholder="e.g. Memory leak causing high latency on search workers" required minlength="5">
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-light">Severity</label>
+              <select class="form-select form-select-ops" id="manualSeverity">
+                <option value="P1_CRITICAL">P1 - Critical (System Down / Revenue Lost)</option>
+                <option value="P2_HIGH" selected>P2 - High (Significant Degradation)</option>
+                <option value="P3_MEDIUM">P3 - Medium (Moderate Issue / Workaround Exists)</option>
+                <option value="P4_LOW">P4 - Low (Minor / Informational)</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-light">Affected Service / Component <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-ops" id="manualService" value="Search Worker Service" required minlength="2">
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-light">Reporter Name</label>
+              <input type="text" class="form-control form-control-ops" id="manualReporter" placeholder="Auto-populated with current user">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-light">Initial Assignee</label>
+              <input type="text" class="form-control form-control-ops" id="manualAssignee" placeholder="Optional responder">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-light">Description & Symptoms</label>
+            <textarea class="form-control form-control-ops" id="manualDescription" rows="3" placeholder="Provide context, metrics observed, error codes..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer modal-footer-ops">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" id="submitManualIncidentBtn" class="btn btn-primary fw-semibold">
+            <i class="bi bi-plus-lg me-1"></i> Create Incident
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const manualForm = document.getElementById("manualIncidentForm");
+  if (manualForm) {
+    manualForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitManualIncidentBtn");
+      const title = document.getElementById("manualTitle").value.trim();
+      const severity = document.getElementById("manualSeverity").value;
+      const service_name = document.getElementById("manualService").value.trim();
+      const triggered_by = document.getElementById("manualReporter").value.trim() || 
+        (App.currentUser ? `${App.currentUser.username} (${App.currentUser.role})` : "Operator");
+      const assigned_to = document.getElementById("manualAssignee").value.trim() || null;
+      const description = document.getElementById("manualDescription").value.trim();
+
+      try {
+        btn.disabled = true;
+        const res = await API.createIncident({
+          title, severity, service_name, triggered_by, assigned_to, description
+        });
+        const modal = bootstrap.Modal.getInstance(document.getElementById("manualIncidentModal"));
+        if (modal) modal.hide();
+        manualForm.reset();
+        App.showToast(res.message, "success");
+        App.loadDashboardData();
+      } catch (err) {
+        App.showToast("Failed to create incident: " + (err.error || err.message), "danger");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+});
+</script>
+{% endblock %}
+

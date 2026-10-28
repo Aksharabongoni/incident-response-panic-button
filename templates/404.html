@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Incident Not Found (404){% endblock %}
+
+{% block content %}
+<div class="container text-center py-5">
+  <div class="ops-card p-5 mx-auto" style="max-width: 550px;">
+    <div class="display-1 text-danger mb-3">404</div>
+    <h3 class="fw-bold text-light mb-3">Incident Record Not Found</h3>
+    <p class="text-secondary mb-4">
+      The requested incident ID or route does not exist in the active registry or has been archived.
+    </p>
+    <a href="{{ url_for('web.index') }}" class="btn btn-outline-info">
+      <i class="bi bi-arrow-left me-1"></i> Return to NOC Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}
+

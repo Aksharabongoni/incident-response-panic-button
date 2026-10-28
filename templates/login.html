@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Authentication & Profile - Incident Panic Center{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+
+      <!-- Active User Card -->
+      <div class="ops-card p-4 mb-4 border-info">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-person-circle fs-3 text-info"></i>
+            <div>
+              <h5 class="mb-0 fw-bold text-light" id="loginProfileUsername">Current Session</h5>
+              <small class="text-secondary" id="loginProfileEmail">Loading session...</small>
+            </div>
+          </div>
+          <span class="badge bg-danger fs-6" id="loginProfileRole">Admin</span>
+        </div>
+
+        <div class="p-3 bg-dark rounded border border-secondary mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="text-secondary small fw-semibold text-uppercase">API Bearer Token</span>
+            <button class="btn btn-sm btn-outline-info py-0 px-2" id="copyTokenBtn">
+              <i class="bi bi-clipboard"></i> Copy
+            </button>
+          </div>
+          <div class="font-monospace small text-truncate text-warning" id="loginProfileToken">None</div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="text-secondary small">Role permissions are active across all endpoints.</span>
+          <button class="btn btn-sm btn-outline-danger" id="logoutBtn">
+            <i class="bi bi-box-arrow-right me-1"></i> Sign Out
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Role Demo Switcher -->
+      <div class="ops-card p-4 mb-4">
+        <h6 class="text-uppercase text-secondary fw-bold small mb-3">
+          <i class="bi bi-lightning-charge text-warning me-1"></i> Quick Test Switcher (Preset Roles)
+        </h6>
+        <div class="row g-2">
+          <div class="col-4">
+            <button class="btn btn-outline-danger w-100 py-2 d-flex flex-column align-items-center gap-1 quick-role-btn" data-role="Admin">
+              <i class="bi bi-shield-lock-fill fs-5"></i>
+              <span class="fw-bold small">Admin</span>
+              <span style="font-size: 0.65rem;" class="text-secondary">Full Control</span>
+            </button>
+          </div>
+          <div class="col-4">
+            <button class="btn btn-outline-warning w-100 py-2 d-flex flex-column align-items-center gap-1 quick-role-btn" data-role="Responder">
+              <i class="bi bi-person-gear fs-5"></i>
+              <span class="fw-bold small">Responder</span>
+              <span style="font-size: 0.65rem;" class="text-secondary">Ack & Resolve</span>
+            </button>
+          </div>
+          <div class="col-4">
+            <button class="btn btn-outline-primary w-100 py-2 d-flex flex-column align-items-center gap-1 quick-role-btn" data-role="Reporter">
+              <i class="bi bi-person-badge fs-5"></i>
+              <span class="fw-bold small">Reporter</span>
+              <span style="font-size: 0.65rem;" class="text-secondary">Panic Trigger</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sign In / Sign Up Forms Card -->
+      <div class="ops-card p-4">
+        <ul class="nav nav-pills nav-fill mb-4 p-1 bg-dark rounded" id="authTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold" id="signin-tab" data-bs-toggle="tab" data-bs-target="#signin-pane" type="button" role="tab">
+              <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold" id="signup-tab" data-bs-toggle="tab" data-bs-target="#signup-pane" type="button" role="tab">
+              <i class="bi bi-person-plus me-1"></i> Create Account
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content" id="authTabContent">
+          <!-- Sign In Pane -->
+          <div class="tab-pane fade show active" id="signin-pane" role="tabpanel">
+            <form id="signInForm">
+              <div class="mb-3">
+                <label class="form-label text-light fw-semibold">Username or Email</label>
+                <input type="text" class="form-control form-control-ops" id="loginUsername" placeholder="e.g. admin or admin@ops.internal" required>
+              </div>
+              <div class="mb-4">
+                <label class="form-label text-light fw-semibold">Password</label>
+                <input type="password" class="form-control form-control-ops" id="loginPassword" placeholder="••••••••" required>
+              </div>
+              <button type="submit" id="submitSignInBtn" class="btn btn-primary w-100 fw-bold py-2">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Authenticate Session
+              </button>
+            </form>
+          </div>
+
+          <!-- Sign Up Pane -->
+          <div class="tab-pane fade" id="signup-pane" role="tabpanel">
+            <form id="signUpForm">
+              <div class="mb-3">
+                <label class="form-label text-light fw-semibold">Username</label>
+                <input type="text" class="form-control form-control-ops" id="registerUsername" placeholder="e.g. ops_commander" required minlength="3">
+              </div>
+              <div class="mb-3">
+                <label class="form-label text-light fw-semibold">Email Address</label>
+                <input type="email" class="form-control form-control-ops" id="registerEmail" placeholder="name@ops.internal" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label text-light fw-semibold">Password</label>
+                <input type="password" class="form-control form-control-ops" id="registerPassword" placeholder="Min 6 characters" required minlength="6">
+              </div>
+              <div class="mb-4">
+                <label class="form-label text-light fw-semibold">Assign Role</label>
+                <select class="form-select form-select-ops" id="registerRole">
+                  <option value="Reporter" selected>Reporter (Can trigger Panic Button & view)</option>
+                  <option value="Responder">Responder (Can claim, ack, & resolve)</option>
+                  <option value="Admin">Admin (Full administrative privileges)</option>
+                </select>
+              </div>
+              <button type="submit" id="submitSignUpBtn" class="btn btn-success w-100 fw-bold py-2">
+                <i class="bi bi-person-check-fill me-1"></i> Register User Account
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function refreshProfileUI() {
+  try {
+    const res = await API.getMe();
+    if (res && res.user) {
+      document.getElementById("loginProfileUsername").textContent = res.user.username;
+      document.getElementById("loginProfileEmail").textContent = res.user.email || "No email assigned";
+      document.getElementById("loginProfileRole").textContent = res.user.role;
+      document.getElementById("loginProfileRole").className = "badge fs-6 " + (
+        res.user.role === "Admin" ? "bg-danger" :
+        res.user.role === "Responder" ? "bg-warning text-dark" : "bg-primary"
+      );
+      document.getElementById("loginProfileToken").textContent = res.user.api_token || "Session Cookie Auth";
+    }
+  } catch (err) {
+    console.error("Profile load error:", err);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  refreshProfileUI();
+
+  // Quick preset role buttons
+  document.querySelectorAll(".quick-role-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      const role = e.currentTarget.getAttribute("data-role");
+      try {
+        const res = await API.switchRole(role);
+        App.currentUser = res.user;
+        App.renderUserUI();
+        App.showToast(res.message, "success");
+        refreshProfileUI();
+      } catch (err) {
+        App.showToast("Failed to switch role: " + (err.error || err.message), "danger");
+      }
+    });
+  });
+
+  // Copy token
+  document.getElementById("copyTokenBtn")?.addEventListener("click", () => {
+    const token = document.getElementById("loginProfileToken").textContent;
+    if (token && token !== "None") {
+      navigator.clipboard.writeText(token);
+      App.showToast("API token copied to clipboard.", "info");
+    }
+  });
+
+  // Sign In form
+  document.getElementById("signInForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("submitSignInBtn");
+    const u = document.getElementById("loginUsername").value.trim();
+    const p = document.getElementById("loginPassword").value;
+    try {
+      btn.disabled = true;
+      const res = await API.login(u, p);
+      App.currentUser = res.user;
+      App.renderUserUI();
+      App.showToast(res.message, "success");
+      refreshProfileUI();
+      setTimeout(() => window.location.href = "/", 1000);
+    } catch (err) {
+      App.showToast(err.message, "danger");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Sign Up form
+  document.getElementById("signUpForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("submitSignUpBtn");
+    const username = document.getElementById("registerUsername").value.trim();
+    const email = document.getElementById("registerEmail").value.trim();
+    const password = document.getElementById("registerPassword").value;
+    const role = document.getElementById("registerRole").value;
+    try {
+      btn.disabled = true;
+      const res = await API.register(username, email, password, role);
+      App.currentUser = res.user;
+      App.renderUserUI();
+      App.showToast(res.message, "success");
+      refreshProfileUI();
+      setTimeout(() => window.location.href = "/", 1000);
+    } catch (err) {
+      App.showToast(err.message, "danger");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Sign Out
+  document.getElementById("logoutBtn")?.addEventListener("click", async () => {
+    try {
+      const res = await API.logout();
+      App.showToast(res.message, "info");
+      setTimeout(() => window.location.reload(), 600);
+    } catch (err) {
+      App.showToast(err.message, "danger");
+    }
+  });
+});
+</script>
+{% endblock %}
+

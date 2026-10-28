@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}User Management & RBAC - Incident Panic Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-lg-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <h3 class="fw-bold text-light mb-1">
+        <i class="bi bi-people-fill text-info me-2"></i>User Management & RBAC Administration
+      </h3>
+      <p class="text-secondary mb-0">Manage system responders, operators, role assignments, and security API tokens.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-info" id="refreshUsersBtn">
+        <i class="bi bi-arrow-clockwise"></i> Refresh Users
+      </button>
+      <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+        <i class="bi bi-person-plus-fill me-1"></i> Add New User
+      </button>
+    </div>
+  </div>
+
+  <!-- Role Hierarchy Information Card -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="p-3 bg-dark rounded border border-danger">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="badge bg-danger fs-6">Admin</span>
+          <i class="bi bi-shield-lock-fill text-danger fs-5"></i>
+        </div>
+        <p class="small text-secondary mb-0">Full system access. Can close incidents, delete/manage users, and access administrative settings.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="p-3 bg-dark rounded border border-warning">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="badge bg-warning text-dark fs-6">Responder</span>
+          <i class="bi bi-person-gear text-warning fs-5"></i>
+        </div>
+        <p class="small text-secondary mb-0">On-call incident responder. Can acknowledge incidents, resolve incidents, post timeline notes, and reassign.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="p-3 bg-dark rounded border border-primary">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="badge bg-primary fs-6">Reporter</span>
+          <i class="bi bi-person-badge text-primary fs-5"></i>
+        </div>
+        <p class="small text-secondary mb-0">Operations personnel. Can activate Panic Button, report new incidents, and view live dashboards.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users Table Card -->
+  <div class="ops-card">
+    <div class="card-header-ops d-flex justify-content-between align-items-center py-3">
+      <span class="fw-bold text-light"><i class="bi bi-person-lines-fill text-info me-2"></i>Active Accounts Registry</span>
+      <span class="badge bg-secondary" id="usersCountBadge">Loading...</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-ops align-middle">
+        <thead>
+          <tr>
+            <th style="width: 180px;">Username</th>
+            <th>Email</th>
+            <th style="width: 150px;">Role</th>
+            <th style="width: 280px;">API Token</th>
+            <th style="width: 170px;">Created (UTC)</th>
+            <th style="width: 180px;" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <tr>
+            <td colspan="6" class="text-center py-5 text-secondary">
+              <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+              Loading users...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content modal-content-ops">
+      <div class="modal-header modal-header-ops">
+        <h5 class="modal-title fw-bold text-light">
+          <i class="bi bi-person-plus text-info me-2"></i>Provision User Account
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="createUserForm">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label text-light fw-semibold">Username <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-ops" id="newUsername" placeholder="e.g. s_connor" required minlength="3">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-light fw-semibold">Email Address <span class="text-danger">*</span></label>
+            <input type="email" class="form-control form-control-ops" id="newEmail" placeholder="s.connor@ops.internal" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-light fw-semibold">Password <span class="text-danger">*</span></label>
+            <input type="password" class="form-control form-control-ops" id="newPassword" placeholder="Min 6 characters" required minlength="6">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-light fw-semibold">Role</label>
+            <select class="form-select form-select-ops" id="newRole">
+              <option value="Reporter">Reporter (Can trigger Panic Button)</option>
+              <option value="Responder" selected>Responder (Can Acknowledge & Resolve)</option>
+              <option value="Admin">Admin (Full Control)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer modal-footer-ops">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" id="submitCreateUserBtn" class="btn btn-primary fw-bold">
+            <i class="bi bi-check-lg me-1"></i> Create Account
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadUsersTable() {
+  const tbody = document.getElementById("usersTableBody");
+  try {
+    const res = await API.request("/auth/users");
+    const users = res.users || [];
+
+    document.getElementById("usersCountBadge").textContent = `${users.length} Users Registered`;
+
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-secondary">No users found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = users.map(u => {
+      const roleBadge = u.role === "Admin" 
+        ? '<span class="badge bg-danger">Admin</span>'
+        : u.role === "Responder" 
+          ? '<span class="badge bg-warning text-dark">Responder</span>'
+          : '<span class="badge bg-primary">Reporter</span>';
+
+      const tokenSnippet = u.api_token 
+        ? `<span class="font-monospace small text-warning" title="${u.api_token}">${u.api_token.substring(0, 18)}...</span>`
+        : '<span class="text-secondary small">None</span>';
+
+      const dateStr = u.created_at ? new Date(u.created_at).toLocaleString("en-US", {
+        month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit"
+      }) : "-";
+
+      return `
+        <tr>
+          <td class="fw-bold text-light">
+            <i class="bi bi-person-fill text-info me-1"></i> ${App.escapeHtml(u.username)}
+          </td>
+          <td>${App.escapeHtml(u.email)}</td>
+          <td>${roleBadge}</td>
+          <td>${tokenSnippet}</td>
+          <td class="text-secondary small">${dateStr}</td>
+          <td class="text-end">
+            <div class="dropdown d-inline-block">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                Role
+              </button>
+              <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                <li><button class="dropdown-item" onclick="changeRole(${u.id}, 'Admin')"><i class="bi bi-shield-fill text-danger me-2"></i>Admin</button></li>
+                <li><button class="dropdown-item" onclick="changeRole(${u.id}, 'Responder')"><i class="bi bi-gear-fill text-warning me-2"></i>Responder</button></li>
+                <li><button class="dropdown-item" onclick="changeRole(${u.id}, 'Reporter')"><i class="bi bi-person-fill text-primary me-2"></i>Reporter</button></li>
+              </ul>
+            </div>
+            <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteUser(${u.id}, '${App.escapeJs(u.username)}')">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  } catch (err) {
+    if (err.status === 403) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center py-5">
+            <div class="alert alert-warning d-inline-block text-start">
+              <h6 class="fw-bold"><i class="bi bi-shield-lock-fill text-warning me-2"></i>Admin Permission Required</h6>
+              <p class="mb-2 small">Your current session role is not authorized to inspect the User Registry.</p>
+              <button class="btn btn-sm btn-danger fw-bold" onclick="switchToAdmin()">
+                <i class="bi bi-arrow-repeat me-1"></i> Switch Role to Admin
+              </button>
+            </div>
+          </td>
+        </tr>`;
+    } else {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Error: ${err.message}</td></tr>`;
+    }
+  }
+}
+
+async function switchToAdmin() {
+  try {
+    const res = await API.switchRole("Admin");
+    App.currentUser = res.user;
+    App.renderUserUI();
+    App.showToast("Switched to Admin role.", "success");
+    loadUsersTable();
+  } catch (e) {
+    App.showToast("Switch failed: " + e.message, "danger");
+  }
+}
+
+async function changeRole(userId, newRole) {
+  try {
+    const res = await API.request(`/auth/users/${userId}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role: newRole })
+    });
+    App.showToast(res.message, "success");
+    loadUsersTable();
+  } catch (e) {
+    App.showToast("Failed to update role: " + (e.error || e.message), "danger");
+  }
+}
+
+async function deleteUser(userId, username) {
+  if (confirm(`Are you sure you want to delete user account '${username}'?`)) {
+    try {
+      const res = await API.request(`/auth/users/${userId}`, { method: "DELETE" });
+      App.showToast(res.message, "warning");
+      loadUsersTable();
+    } catch (e) {
+      App.showToast("Failed to delete user: " + (e.error || e.message), "danger");
+    }
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadUsersTable();
+
+  document.getElementById("refreshUsersBtn")?.addEventListener("click", () => {
+    loadUsersTable();
+    App.showToast("User registry refreshed.", "info");
+  });
+
+  document.getElementById("createUserForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("submitCreateUserBtn");
+    const username = document.getElementById("newUsername").value.trim();
+    const email = document.getElementById("newEmail").value.trim();
+    const password = document.getElementById("newPassword").value;
+    const role = document.getElementById("newRole").value;
+
+    try {
+      btn.disabled = true;
+      const res = await API.request("/auth/users", {
+        method: "POST",
+        body: JSON.stringify({ username, email, password, role })
+      });
+      const modal = bootstrap.Modal.getInstance(document.getElementById("createUserModal"));
+      if (modal) modal.hide();
+      document.getElementById("createUserForm").reset();
+      App.showToast(res.message, "success");
+      loadUsersTable();
+    } catch (err) {
+      App.showToast("Creation failed: " + (err.error || err.message), "danger");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+});
+</script>
+{% endblock %}
+
