@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🚨 Incident Response Panic Button System
 
 A mission-critical, full-stack incident management and operations platform designed for SRE, DevOps, and NOC (Network Operations Center) teams. The system enables immediate declaration of P1 Critical outages via an emergency Panic Button, dispatches multi-channel alerts, orchestrates incident state transitions, enforces role-based access control, supports idempotency caching, and records immutable audit histories.
@@ -313,3 +314,7 @@ This script exercises all 7 phases against the running Flask application:
 6. Resolves incident with root cause and records MTTR
 7. Validates chronological immutable audit records
 
+=======
+# incident-response-panic-button
+AWS-based Incident Response Panic Button System with automated alerts and remediation.
+>>>>>>> fe9872784249b57dec999d6a8e96ae0be8d0a0af
