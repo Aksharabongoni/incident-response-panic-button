@@ -4,11 +4,14 @@ import tempfile
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 if os.environ.get("VERCEL"):
-    DATABASE_PATH = os.path.join(tempfile.gettempdir(), "incident_panic.db")
+    DATABASE_DIR = tempfile.gettempdir()
+    os.makedirs(DATABASE_DIR, exist_ok=True)
+    DATABASE_PATH = os.path.join(DATABASE_DIR, "incident_panic.db")
 else:
     DATABASE_PATH = os.path.join(BASE_DIR, "instance", "incident_panic.db")
 
-DATABASE_URL = f"sqlite:///{DATABASE_PATH.replace(os.sep, '/')}"
+normalized_database_path = DATABASE_PATH.replace(os.sep, "/")
+DATABASE_URL = f"sqlite:///{normalized_database_path}"
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "panic-button-super-secret-key-2026")
