@@ -161,7 +161,7 @@ def switch_demo_role():
         user = AuthService.register_user(
             username=target_role.lower(),
             email=f"{target_role.lower()}@ops.internal",
-            password=f"{target_role.lower()}123",
+            password=target_role.lower() + "123",
             role=target_role
         )
 

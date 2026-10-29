@@ -24,7 +24,7 @@ const API = {
 
     const token = this.getToken();
     if (token) {
-      defaultHeaders["Authorization"] = `Bearer ${token}`;
+      defaultHeaders["Authorization"] = "Bearer " + token;
     }
 
     const config = {
