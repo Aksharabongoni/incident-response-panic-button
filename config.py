@@ -1,12 +1,20 @@
 import os
+import tempfile
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+if os.environ.get("VERCEL"):
+    DATABASE_PATH = os.path.join(tempfile.gettempdir(), "incident_panic.db")
+else:
+    DATABASE_PATH = os.path.join(BASE_DIR, "instance", "incident_panic.db")
+
+DATABASE_URL = f"sqlite:///{DATABASE_PATH.replace(os.sep, '/')}"
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "panic-button-super-secret-key-2026")
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
-        f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'incident_panic.db')}"
+        DATABASE_URL
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
