@@ -48,7 +48,7 @@ def test_user_registration(client):
     data = res.get_json()
     assert data["success"] is True
     assert data["user"]["username"] == "test_engineer"
-    assert data["user"]["role"] == "Responder"
+    assert data["user"]["role"] == "Reporter"
     assert data["user"]["api_token"].startswith("tok_")
 
     # Login with new credentials
@@ -92,14 +92,16 @@ def test_auth_me_x_api_key(client):
 
 def test_unauthenticated_protected_endpoint(client):
     """Verify accessing an authenticated endpoint without credentials returns 401."""
-    res = client.get("/api/auth/users")
+    client.post("/api/auth/logout", headers={"Authorization": ""})
+    res = client.get("/api/auth/users", headers={"Authorization": ""})
     assert res.status_code == 401
     data = res.get_json()
     assert data["code"] in ["AUTHENTICATION_FAILED", "UNAUTHORIZED"]
 
 def test_auth_me_guest_when_unauthenticated(client):
     """Verify /api/auth/me returns guest payload when not logged in."""
-    res = client.get("/api/auth/me")
+    client.post("/api/auth/logout", headers={"Authorization": ""})
+    res = client.get("/api/auth/me", headers={"Authorization": ""})
     assert res.status_code == 200
     data = res.get_json()
     assert data["authenticated"] is False

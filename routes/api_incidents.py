@@ -10,7 +10,7 @@ from exceptions import AppException, ValidationError, NotFoundError
 api_incidents_bp = Blueprint("api_incidents", __name__, url_prefix="/api")
 
 @api_incidents_bp.route("/panic", methods=["POST"])
-@optional_auth
+@role_required(UserRole.REPORTER)
 def panic():
     """
     PANIC BUTTON ENDPOINT:
@@ -102,7 +102,7 @@ def list_incidents():
 
 
 @api_incidents_bp.route("/incidents", methods=["POST"])
-@optional_auth
+@role_required(UserRole.REPORTER)
 def create_incident():
     """Manual incident creation endpoint with idempotency support."""
     idempotency_key = IdempotencyService.extract_key_from_request()
@@ -167,7 +167,7 @@ def get_incident(incident_id):
 
 
 @api_incidents_bp.route("/incidents/<int:incident_id>/acknowledge", methods=["POST"])
-@optional_auth
+@role_required(UserRole.RESPONDER)
 def acknowledge_incident(incident_id):
     """Acknowledge an open incident (Requires Responder or Admin role if logged in)."""
     data = request.get_json(silent=True) or {}
@@ -194,7 +194,7 @@ def acknowledge_incident(incident_id):
 
 
 @api_incidents_bp.route("/incidents/<int:incident_id>/resolve", methods=["POST"])
-@optional_auth
+@role_required(UserRole.RESPONDER)
 def resolve_incident(incident_id):
     """Resolve an incident, providing root cause and resolution notes."""
     data = request.get_json(silent=True) or {}
@@ -223,7 +223,7 @@ def resolve_incident(incident_id):
 
 
 @api_incidents_bp.route("/incidents/<int:incident_id>/close", methods=["POST"])
-@optional_auth
+@role_required(UserRole.ADMIN)
 def close_incident(incident_id):
     """Close an incident after post-mortem."""
     data = request.get_json(silent=True) or {}
@@ -244,7 +244,7 @@ def close_incident(incident_id):
 
 
 @api_incidents_bp.route("/incidents/<int:incident_id>/reopen", methods=["POST"])
-@optional_auth
+@role_required(UserRole.RESPONDER)
 def reopen_incident(incident_id):
     """Reopen a resolved incident if an issue re-emerges."""
     data = request.get_json(silent=True) or {}
@@ -271,6 +271,7 @@ def reopen_incident(incident_id):
 
 
 @api_incidents_bp.route("/incidents/<int:incident_id>/status", methods=["PATCH"])
+@role_required(UserRole.RESPONDER)
 def update_status(incident_id):
     """Transition incident status via PATCH."""
     data = request.get_json(silent=True) or {}
@@ -289,7 +290,7 @@ def update_status(incident_id):
 
 
 @api_incidents_bp.route("/incidents/<int:incident_id>/comments", methods=["POST"])
-@optional_auth
+@role_required(UserRole.RESPONDER)
 def add_comment(incident_id):
     """Add a timeline comment/update."""
     data = request.get_json(silent=True) or {}
@@ -316,7 +317,7 @@ def add_comment(incident_id):
 
 
 @api_incidents_bp.route("/incidents/<int:incident_id>/assign", methods=["POST"])
-@optional_auth
+@role_required(UserRole.RESPONDER)
 def assign_incident(incident_id):
     """Assign or reassign an incident."""
     data = request.get_json(silent=True) or {}

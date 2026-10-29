@@ -188,7 +188,14 @@ async function loadUsersTable() {
     }).join("");
   } catch (err) {
     if (err.status === 401) {
-      switchToAdmin();
+      tbody.innerHTML = `
+        <tr><td colspan="6" class="text-center py-5">
+          <div class="alert alert-warning d-inline-block text-start">
+            <h6 class="fw-bold">Authentication Required</h6>
+            <p class="mb-2 small">Sign in with an administrator account to view and manage users.</p>
+            <a class="btn btn-sm btn-primary fw-bold" href="/login"><i class="bi bi-box-arrow-in-right me-1"></i>Go to Login</a>
+          </div>
+        </td></tr>`;
       return;
     }
     if (err.status === 403) {

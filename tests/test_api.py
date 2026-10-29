@@ -17,7 +17,29 @@ def app():
 
 @pytest.fixture
 def client(app):
-    return app.test_client()
+    test_client = app.test_client()
+    login = test_client.post("/api/auth/login", json={"username": "responder", "password": "responder123"})
+    token = login.get_json()["user"]["api_token"]
+    original_post = test_client.post
+    original_get = test_client.get
+
+    def authenticated_post(*args, **kwargs):
+        headers = dict(kwargs.get("headers") or {})
+        if "Authorization" not in headers and "X-API-Key" not in headers:
+            headers["Authorization"] = f"Bearer {token}"
+        kwargs["headers"] = headers
+        return original_post(*args, **kwargs)
+
+    def authenticated_get(*args, **kwargs):
+        headers = dict(kwargs.get("headers") or {})
+        if "Authorization" not in headers and "X-API-Key" not in headers:
+            headers["Authorization"] = f"Bearer {token}"
+        kwargs["headers"] = headers
+        return original_get(*args, **kwargs)
+
+    test_client.post = authenticated_post
+    test_client.get = authenticated_get
+    return test_client
 
 def get_auth_headers(client, username, password):
     """Helper to log in and get Authorization Bearer header."""

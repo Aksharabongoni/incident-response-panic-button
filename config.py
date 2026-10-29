@@ -14,7 +14,10 @@ normalized_database_path = DATABASE_PATH.replace(os.sep, "/")
 DATABASE_URL = f"sqlite:///{normalized_database_path}"
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "panic-button-super-secret-key-2026")
+    _production_secret = os.environ.get("SECRET_KEY")
+    if os.environ.get("VERCEL") and not _production_secret:
+        _production_secret = os.urandom(32).hex()
+    SECRET_KEY = _production_secret or "development-only-secret-key"
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
         DATABASE_URL

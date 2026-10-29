@@ -148,8 +148,12 @@ def role_required(*allowed_roles):
             # Check if user has any of the allowed roles
             has_permission = any(AuthService.user_has_role(user.role, r) for r in allowed_roles)
             if not has_permission:
-                allowed_str = ", ".join(allowed_roles)
-                raise AuthorizationError(f"Access denied. Required role: '{allowed_str}'. Your role: '{user.role}'.")
+                allowed_names = [role.lower() for role in allowed_roles]
+                if len(allowed_names) == 1:
+                    allowed_text = "responder or admin" if allowed_names[0] == "responder" else allowed_names[0] + " or higher"
+                else:
+                    allowed_text = " or ".join(allowed_names)
+                raise AuthorizationError(f"Access denied. Required role: {allowed_text}. Your role: '{user.role}'.")
             
             g.current_user = user
             return f(*args, **kwargs)

@@ -2,14 +2,14 @@ import re
 import pytest
 from models import IncidentSeverity, IncidentStatus
 
-def test_panic_creates_p1_critical(client):
+def test_panic_creates_p1_critical(client, reporter_headers):
     """Verify that triggering the Panic Button immediately creates a P1 Critical incident."""
     res = client.post("/api/panic", json={
         "title": "EMERGENCY: Payment Processing Service Degraded",
         "service_name": "Checkout API",
         "description": "504 Gateway Timeout across all credit card checkout endpoints.",
         "triggered_by": "Ops Lead"
-    })
+    }, headers=reporter_headers)
     assert res.status_code == 201
     data = res.get_json()
     assert data["success"] is True
@@ -25,12 +25,12 @@ def test_panic_creates_p1_critical(client):
     # Verify incident key format: INC-YYYY-XXXX-SS
     assert re.match(r"^INC-\d{4}-\d{4}-\d{2}$", inc["key"]) is not None
 
-def test_panic_dispatches_multi_channel_notifications(client):
+def test_panic_dispatches_multi_channel_notifications(client, reporter_headers):
     """Verify that Panic Button activation broadcasts to Pager/SMS, Slack, Email, and NOC."""
     res = client.post("/api/panic", json={
         "title": "EMERGENCY: Redis Replication Outage",
         "service_name": "Cache Layer"
-    })
+    }, headers=reporter_headers)
     assert res.status_code == 201
     inc_id = res.get_json()["incident"]["id"]
 
@@ -51,13 +51,13 @@ def test_panic_dispatches_multi_channel_notifications(client):
         assert n["status"] in ["SENT", "DELIVERED"]
         assert len(n["message"]) > 0
 
-def test_panic_creates_immutable_audit_records(client):
+def test_panic_creates_immutable_audit_records(client, reporter_headers):
     """Verify that activating the Panic Button logs PANIC_TRIGGERED and NOTIFICATIONS_DISPATCHED in audit trail."""
     res = client.post("/api/panic", json={
         "title": "EMERGENCY: Edge CDN DNS Resolver Failure",
         "service_name": "DNS Ingress",
         "triggered_by": "Senior SRE"
-    })
+    }, headers=reporter_headers)
     inc_id = res.get_json()["incident"]["id"]
 
     audit_res = client.get(f"/api/incidents/{inc_id}/audit")

@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, request, jsonify, session, g
 from database import db
 from services.auth_service import AuthService, auth_required, role_required, optional_auth
@@ -13,7 +14,10 @@ def register():
     username = data.get("username")
     email = data.get("email")
     password = data.get("password")
-    role = data.get("role", UserRole.REPORTER)
+    requested_role = data.get("role")
+    if requested_role and requested_role not in UserRole.ALL:
+        raise ValidationError(f"Invalid role '{requested_role}'.")
+    role = UserRole.REPORTER
 
     user = AuthService.register_user(username, email, password, role)
     session["user_id"] = user.id
@@ -150,6 +154,9 @@ def switch_demo_role():
     Convenience endpoint for local testing:
     Switches active session to default Admin, Responder, or Reporter user.
     """
+    if os.environ.get("VERCEL") or os.environ.get("FLASK_ENV") == "production":
+        raise ValidationError("Demo role switching is disabled in production.")
+
     data = request.get_json(silent=True) or {}
     target_role = data.get("role", UserRole.ADMIN)
     if target_role not in UserRole.ALL:

@@ -61,14 +61,14 @@ def test_resolve_missing_root_cause(client, responder_headers):
     assert bad_resolve.get_json()["code"] == "VALIDATION_ERROR"
     assert "root cause" in bad_resolve.get_json()["error"].lower() and "required" in bad_resolve.get_json()["error"].lower()
 
-def test_nonexistent_incident_not_found(client):
+def test_nonexistent_incident_not_found(client, responder_headers):
     """Verify querying or acting on a non-existent incident returns 404 NOT_FOUND."""
     res = client.get("/api/incidents/9999999")
     assert res.status_code == 404
     data = res.get_json()
     assert data["code"] == "NOT_FOUND"
 
-    ack_res = client.post("/api/incidents/9999999/acknowledge")
+    ack_res = client.post("/api/incidents/9999999/acknowledge", headers=responder_headers)
     assert ack_res.status_code == 404
     assert ack_res.get_json()["code"] == "NOT_FOUND"
 

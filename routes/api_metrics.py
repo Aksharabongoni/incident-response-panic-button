@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify
 from services.incident_service import IncidentService
 from database import db
-from models import Incident, AuditLog, NotificationLog, TimelineComment
+from models import Incident, AuditLog, NotificationLog, TimelineComment, UserRole
+from services.auth_service import role_required
 
 api_metrics_bp = Blueprint("api_metrics", __name__, url_prefix="/api")
 
@@ -19,6 +20,7 @@ def get_metrics():
 
 
 @api_metrics_bp.route("/seed", methods=["POST"])
+@role_required(UserRole.ADMIN)
 def seed_data():
     """Populates realistic demo incidents across different states and services."""
     from seed_data import populate_sample_data
@@ -33,6 +35,7 @@ def seed_data():
 
 
 @api_metrics_bp.route("/reset", methods=["POST"])
+@role_required(UserRole.ADMIN)
 def reset_data():
     """Resets all incidents, audit logs, and notification logs."""
     try:
